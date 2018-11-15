@@ -6,12 +6,6 @@ import bodyParser from 'body-parser';
 import config from './config';
 import api from 'v1';
 
-import log from 'all-log';
-import resourceCrud from './services/resourceCrud';
-console.log('get', resourceCrud.get('posts', {}, undefined, true).size().value());
-
-log('get', resourceCrud.get('posts', { title: 'Post 1' }));
-
 const app = express();
 app.server = http.createServer(app);
 
