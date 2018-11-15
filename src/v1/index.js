@@ -3,84 +3,14 @@ import { name, version, author } from '../../package.json';
 import log from 'all-log';
 import fs from 'fs';
 import path from 'path';
-import iconv from 'iconv-lite';
-import xlsx from 'xlsx';
 import cheerio from 'cheerio';
-import parse from 'csv-parse/lib/sync';
 
 export default () => {
   const api = router();
 
   api.get('/stats', (req, res) => {
-    fs.readFile(path.resolve(process.env.NODE_PATH, '../data/Historia_Operacji_2018-11-15_18-16-00.csv'), 'binary', (err, rawData) => {
-      if (err) throw err;
-
-      let data = iconv.decode(rawData, 'cp1250');
-
-      const [first, ...lines] = data.split('\r\n');
-      log('length', lines.length, `${lines[1].replace(/;\n$/m, '\n')}`);
-      data = lines.map(line => line.replace(/;$/, '')).join('\n');
-
-      try {
-        const records = parse(data, {
-          columns: false,
-          skip_empty_lines: true,
-          skip_lines_with_error: true,
-          delimiter: ';',
-        });
-        res.json(records);
-      } catch (e) {
-        res.status(500).json({message: e.message});
-      }
-    });
-  });
-
-  api.get('/statsxls', (req, res) => {
-    const workbook = xlsx.readFile(path.resolve(process.env.NODE_PATH, '../data/test.xls'));
-
-    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-    const parsed = xlsx.utils.sheet_to_json(worksheet);
-
-    /*
-    "__EMPTY": "Nazwa nadawcy",
-        "__EMPTY_1": "Nazwa odbiorcy",
-        "__EMPTY_2": "Szczegóły transakcji",
-        "__EMPTY_3": "Kwota operacji",
-        "__EMPTY_4": "Waluta operacji",
-        "__EMPTY_5": "Kwota w walucie rachunku",
-        "__EMPTY_6": "Waluta rachunku",
-        "__EMPTY_7": "Numer rachunku nadawcy",
-        "__EMPTY_8": "Numer rachunku odbiorcy"
-     */
-
-    const [first, ...mapped] = parsed.map(el => {
-      return {
-        transactionDate: el['Kryteria transakcji : '],
-        bookingDate: '',
-        cardTransaction: null,
-        sender: el['__EMPTY'],
-        receiver: el['__EMPTY_1'],
-        description: el['__EMPTY_2'],
-        amount: el['__EMPTY_3'],
-        currency: el['__EMPTY_4'],
-        amountConverted: el['__EMPTY_5'],
-        accountCurrency: el['__EMPTY_6'],
-        senderAccountNumber: el['__EMPTY_7'],
-        receiverAccountNumber: el['__EMPTY_8'],
-      };
-    });
-
-
-
-
-    res.json(stats(mapped));
-      // res.status(500).json({message: e.message});
-  });
-
-  api.get('/cheerio', (req, res) => {
     fs.readFile(path.resolve(process.env.NODE_PATH, '../data/test.html'), 'utf-8', (err, html) => {
       if (err) throw err;
-
 
       const $ = cheerio.load(html);
       const mapped = [];
@@ -178,3 +108,18 @@ function stats(list) {
 
   return {sums};
 }
+
+/*
+transactionDate
+bookingDate
+cardTransaction
+sender
+receiver
+description
+amount
+currency
+amountConverted
+accountCurrency
+senderAccountNumber
+receiverAccountNumber
+ */
