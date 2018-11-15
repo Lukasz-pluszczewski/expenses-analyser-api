@@ -1,14 +1,87 @@
 import { Router as router } from 'express';
 import { name, version, author } from '../../package.json';
 import log from 'all-log';
+import _ from 'lodash';
 import fs from 'fs';
 import path from 'path';
 import cheerio from 'cheerio';
+
+const FOOD = 'FOOD';
+const RESTAURANT = 'RESTAURANT';
+const CAR = 'CAR';
+const ENTERTAINMENT = 'ENTERTAINMENT';
+const ELECTRONICS = 'ELECTRONICS';
+const SEX = 'SEX';
+const COSMETICS = 'COSMETICS';
+const HEALTH = 'HEALTH';
+const SERVICES = 'SERVICES';
+const KIMCZERS = 'KIMCZERS';
+const CLOTHES = 'CLOTHES';
+const HOME = 'HOME';
+const PAYU = 'PAYU';
+const PAYPRO = 'PAYPRO';
+const BLUEMEDIA = 'BLUEMEDIA';
+
+const catalogue = {
+  'zabka': FOOD,
+  'CARREFOUR': FOOD,
+  'GRZYBEK-PL': FOOD,
+  'AUCHAN': FOOD,
+  'FRESHMARKET': FOOD,
+  'TESCO': FOOD,
+  'Lidl': FOOD,
+  'BIEDRONKA': FOOD,
+  'McDonalds': RESTAURANT,
+  'Pizza': RESTAURANT,
+  'SZYNK NA WINKLU': RESTAURANT,
+  'Czekoladziarnia': RESTAURANT,
+  'RESTAURACJA': RESTAURANT,
+  'Restaurant': RESTAURANT,
+  'DOMINIUM': RESTAURANT,
+  'pyszne': RESTAURANT,
+  'Starbucks': RESTAURANT,
+  'POCO LOCO': RESTAURANT,
+  'PLAYSTATIONNETWORK': ENTERTAINMENT,
+  'GOOGLE': ENTERTAINMENT,
+  'HBOEUROPESRO': ENTERTAINMENT,
+  'NETFLIX': ENTERTAINMENT,
+  'Spotify': ENTERTAINMENT,
+  'SOUNDIIZ': ENTERTAINMENT,
+  'x-kom': ELECTRONICS,
+  'Zoolo': KIMCZERS,
+  'sex': SEX,
+  'BEAUTY': COSMETICS,
+  'ROSSMANN': COSMETICS,
+  'sephora': COSMETICS,
+  'DIVERSE': CLOTHES,
+  'BERSHKA': CLOTHES,
+  'ZALANDO': CLOTHES,
+  'pachnidelko': COSMETICS,
+  'hebe': COSMETICS,
+  'Super - Pharm': COSMETICS,
+  'BARBER': SERVICES,
+  'uber': SERVICES,
+  'TRAFICAR': SERVICES,
+  'InPost': SERVICES,
+  'SHELL': CAR,
+  'Stalexport': CAR,
+  'ORLEN': CAR,
+  'ALICJA BARANEK': HEALTH,
+  'CENTRUM MED.': HEALTH,
+  'Apteka': HEALTH,
+  'MEDICINE': HEALTH,
+  'PayU': PAYU,
+  'PayPro': PAYPRO,
+  'BLUEMEDIA': BLUEMEDIA,
+  'IKEA': HOME,
+  'Leroy': HOME,
+};
 
 export default () => {
   const api = router();
 
   api.get('/stats', (req, res) => {
+    const month = req.query.month || null;
     fs.readFile(path.resolve(process.env.NODE_PATH, '../data/test.html'), 'utf-8', (err, html) => {
       if (err) throw err;
 
@@ -26,7 +99,7 @@ export default () => {
         let string = signedString;
         let negative = false;
         if (signedString.indexOf('-') !== -1) {
-          string = signedString.replace('- ', '');
+          string = signedString.replace(/- ?/, '');
           negative = true;
         }
 
@@ -84,29 +157,62 @@ export default () => {
             newRow[COLUMN_NAME[i]] = $(column).text();
           }
         });
+
+        console.log('month', {month, data: newRow.transactionDate, index: newRow.transactionDate.indexOf(month)});
+        if (month) {
+          if (newRow.transactionDate.indexOf(month) !== -1) {
+            return mapped.push(newRow);
+          }
+          return true;
+        }
         return mapped.push(newRow);
       });
 
-      res.json(mapped);
+      res.json(stats(mapped));
     });
   });
 
   return api;
 };
 
+function contains(text, keyword) {
+  return text && text.toLowerCase().indexOf(keyword.toLowerCase()) !== -1;
+}
 
 function stats(list) {
   // calculating sums
-  const sums = {in: 0, out: 0};
+  const sums = { in: 0, out: 0 };
+  const categories = {};
+  const categoriesList = {};
   list.forEach(el => {
-    if (el.amount > 0) {
-      sums.in += el.amount;
+    const amount = el.amountConverted;
+    if (amount > 0) {
+      sums.in += amount;
     } else {
-      sums.out += el.amount;
+      let isCategorised = false;
+      _.forEach(catalogue, (category, keyword) => {
+        if (contains(el.description, keyword) || contains(el.receiver, keyword)) {
+          isCategorised = true;
+          categories[category] = (categories[category] || 0) + el.amount;
+          if (!categoriesList[category]) {
+            categoriesList[category] = [];
+          }
+          categoriesList[category].push(el);
+        }
+      });
+      if (!isCategorised) {
+        categories.other = (categories.other || 0) + el.amount;
+        if (!categoriesList.other) {
+          categoriesList.other = [];
+        }
+        categoriesList.other.push(el);
+      }
+
+      sums.out += amount;
     }
   });
 
-  return {sums};
+  return { sums, categories, uncategorised: categoriesList.other };
 }
 
 /*
