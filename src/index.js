@@ -2,6 +2,7 @@ import http from 'http';
 import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
+import cache from 'services/cache';
 
 import config from './config';
 import api from 'v1';
@@ -19,6 +20,7 @@ app.use(bodyParser.json({
   limit: config.bodyLimit,
 }));
 
+app.get(cache(120));
 app.use(api());
 
 // starting actual server

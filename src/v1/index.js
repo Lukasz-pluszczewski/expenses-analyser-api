@@ -10,6 +10,7 @@ const FOOD = 'FOOD';
 const RESTAURANT = 'RESTAURANT';
 const CAR = 'CAR';
 const ENTERTAINMENT = 'ENTERTAINMENT';
+const SPORT = 'SPORT';
 const ELECTRONICS = 'ELECTRONICS';
 const SEX = 'SEX';
 const COSMETICS = 'COSMETICS';
@@ -18,8 +19,8 @@ const SERVICES = 'SERVICES';
 const KIMCZERS = 'KIMCZERS';
 const CLOTHES = 'CLOTHES';
 const HOME = 'HOME';
-const PAYU = 'PAYU';
-const PAYPRO = 'PAYPRO';
+const PAYU = RESTAURANT;
+const PAYPRO = RESTAURANT;
 const BLUEMEDIA = 'BLUEMEDIA';
 
 const catalogue = {
@@ -47,6 +48,7 @@ const catalogue = {
   'NETFLIX': ENTERTAINMENT,
   'Spotify': ENTERTAINMENT,
   'SOUNDIIZ': ENTERTAINMENT,
+  'SUMUP': SPORT,
   'x-kom': ELECTRONICS,
   'Zoolo': KIMCZERS,
   'sex': SEX,
@@ -58,6 +60,8 @@ const catalogue = {
   'ZALANDO': CLOTHES,
   'pachnidelko': COSMETICS,
   'hebe': COSMETICS,
+  'notino': COSMETICS,
+  'Feel_Unique': COSMETICS,
   'Super - Pharm': COSMETICS,
   'BARBER': SERVICES,
   'uber': SERVICES,
@@ -82,7 +86,7 @@ export default () => {
 
   api.get('/stats', (req, res) => {
     const month = req.query.month || null;
-    fs.readFile(path.resolve(process.env.NODE_PATH, '../data/test.html'), 'utf-8', (err, html) => {
+    fs.readFile(path.resolve(process.env.NODE_PATH, '../data/Historia_Operacji_2018-11-22_13-50-12.html'), 'utf-8', (err, html) => {
       if (err) throw err;
 
       const $ = cheerio.load(html);
@@ -158,7 +162,8 @@ export default () => {
           }
         });
 
-        console.log('month', {month, data: newRow.transactionDate, index: newRow.transactionDate.indexOf(month)});
+        newRow.categories = getCategory(newRow);
+
         if (month) {
           if (newRow.transactionDate.indexOf(month) !== -1) {
             return mapped.push(newRow);
@@ -179,6 +184,17 @@ function contains(text, keyword) {
   return text && text.toLowerCase().indexOf(keyword.toLowerCase()) !== -1;
 }
 
+function getCategory(transaction) {
+  const categories = [];
+  _.forEach(catalogue, (category, keyword) => {
+    category = category.toLowerCase();
+    if (contains(transaction.description, keyword) || contains(transaction.receiver, keyword)) {
+      categories.push(category);
+    }
+  });
+  return categories.length ? categories : ['other'];
+}
+
 function stats(list) {
   // calculating sums
   const sums = { in: 0, out: 0 };
@@ -189,30 +205,19 @@ function stats(list) {
     if (amount > 0) {
       sums.in += amount;
     } else {
-      let isCategorised = false;
-      _.forEach(catalogue, (category, keyword) => {
-        if (contains(el.description, keyword) || contains(el.receiver, keyword)) {
-          isCategorised = true;
-          categories[category] = (categories[category] || 0) + el.amount;
-          if (!categoriesList[category]) {
-            categoriesList[category] = [];
-          }
-          categoriesList[category].push(el);
+      getCategory(el).forEach(category => {
+        categories[category] = (categories[category] || 0) + el.amount;
+        if (!categoriesList[category]) {
+          categoriesList[category] = [];
         }
+        categoriesList[category].push(el);
       });
-      if (!isCategorised) {
-        categories.other = (categories.other || 0) + el.amount;
-        if (!categoriesList.other) {
-          categoriesList.other = [];
-        }
-        categoriesList.other.push(el);
-      }
 
       sums.out += amount;
     }
   });
 
-  return { sums, categories, uncategorised: categoriesList.other };
+  return { sums, categories, categorised: categoriesList, all: list };
 }
 
 /*
