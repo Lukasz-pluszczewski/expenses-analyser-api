@@ -25,7 +25,7 @@
     "cors": "2.8.5",
     "csv-parse": "3.2.0",
     "express": "4.16.4",
-    "express-winston": "2.4.0",
+    "express-winston": "2.5.0",
     "http-proxy": "1.16.2",
     "iconv-lite": "0.4.24",
     "jsonwebtoken": "7.2.1",
