@@ -35,7 +35,7 @@
     "memory-cache": "0.2.0",
     "node-cmd": "3.0.0",
     "password-hash": "1.2.2",
-    "pm2": "2.7.1",
+    "pm2": "4.0.0",
     "request": "2.83.0",
     "rimraf": "2.6.2",
     "simple-git": "1.79.0",
